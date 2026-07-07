@@ -17,7 +17,7 @@ func setupRoutes() {
 	http.HandleFunc("/ws", tunnel)
 }
 
-func listener(conn *websocket.Conn) {
+func connectTunnel(conn *websocket.Conn) {
 	for {
 		messageType, p, err := conn.ReadMessage()
 		if err != nil {
@@ -39,22 +39,24 @@ func status(w http.ResponseWriter, r *http.Request) {
 }
 
 func tunnel(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "sussessfuly enterd the tunnel endpoint")
 	fmt.Println("Endpoint Hit: tunnel requested")
 
 	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
 
 	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		fmt.Println(err)
+		http.Error(w, "websocket upgrade failed", http.StatusBadRequest)
+		fmt.Println("WebSocket upgrade error:", err)
 		return
 	}
 
-	listener(ws)
+	connectTunnel(ws)
 }
 
 func main() {
 	fmt.Println("Brocker Server is starting on port 8080...")
 	setupRoutes()
-	http.ListenAndServe(":8080", nil)
+	if err := http.ListenAndServe(":8080", nil); err != nil {
+		fmt.Println("Broker server failed to start:", err)
+	}
 }
